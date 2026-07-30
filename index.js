@@ -1,10 +1,35 @@
-const { Client , Events, GatewayIntentBits, Collection, } = require('discord.js');
+const { Client, Events, GatewayIntentBits, Collection } = require('discord.js');
 const fs = require('node:fs');
 const path = require('node:path');
+const { startGabberBridge } = require('./gabberBridge');
 
-const {token } = require('./config.json');
+const { token } = require('./config.json');
 
-const client = new Client({ intents: [ GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent,GatewayIntentBits.DirectMessages]});
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent, GatewayIntentBits.DirectMessages] });
+client.commands = new Collection();
+
+const commandsPath = path.join(__dirname, 'commands');
+const commandFolders = fs.readdirSync(commandsPath);
+
+for (const folder of commandFolders) {
+  const folderPath = path.join(commandsPath, folder);
+  if (!fs.statSync(folderPath).isDirectory()) continue;
+
+  const commandFiles = fs.readdirSync(folderPath).filter((file) => file.endsWith('.js'));
+  for (const file of commandFiles) {
+    const filePath = path.join(folderPath, file);
+    const command = require(filePath);
+    if ('data' in command && 'execute' in command) {
+      client.commands.set(command.data.name, command);
+    }
+  }
+}
+
+const readyEvent = require('./events/ready');
+const interactionEvent = require('./events/interactionCreate');
+
+client.on(readyEvent.name, (...args) => readyEvent.execute(...args));
+client.on(interactionEvent.name, (...args) => interactionEvent.execute(...args));
 
 
 const vicMuse = require('./data/vicmuse.json');
@@ -13,6 +38,7 @@ const vicTalk1 = require('./data/victalk1.json');
 const vicTalk2 = require('./data/victalk2.json');
 
 client.login(token);
+startGabberBridge({ discordClient: client, token: null, port: 6667 });
 
 function randomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
