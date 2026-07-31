@@ -3,7 +3,7 @@ const WebSocket = require('ws');
 const { EventEmitter } = require('events');
 
 class ChatProxy extends EventEmitter {
-  constructor({ port = 3000, host = '127.0.0.1', sourcePath = '/live/discord' } = {}) {
+  constructor({ port = 3000, host = '127.0.0.1', sourcePath = '/live/discord', provider = 'youtube' } = {}) {
     super();
     this.port = port;
     this.host = host;
@@ -11,13 +11,14 @@ class ChatProxy extends EventEmitter {
     this.httpServer = null;
     this.wsServer = null;
     this.sourcePath = sourcePath;
+    this.provider = provider;
   }
 
   start() {
     this.httpServer = http.createServer((req, res) => {
       if (req.url === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, service: 'vicbot-chat-proxy', source: `http://${this.host}:${this.port}${this.sourcePath}` }));
+        res.end(JSON.stringify({ ok: true, service: 'vicbot-chat-proxy', source: `https://${this.provider}.example/${this.sourcePath.replace(/^\//, '')}` }));
         return;
       }
 
@@ -25,8 +26,8 @@ class ChatProxy extends EventEmitter {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           ok: true,
-          source: `http://${this.host}:${this.port}${this.sourcePath}`,
-          provider: 'discord',
+          source: `https://${this.provider}.example/${this.sourcePath.replace(/^\//, '')}`,
+          provider: this.provider,
           message: 'fake livestream source endpoint',
         }));
         return;
@@ -56,7 +57,8 @@ class ChatProxy extends EventEmitter {
 
     this.httpServer.listen(this.port, this.host, () => {
       console.log(`Chat proxy listening on http://${this.host}:${this.port}`);
-      console.log(`Provider-style source endpoint: http://${this.host}:${this.port}${this.sourcePath}`);
+      console.log(`Provider-style source endpoint: https://${this.provider}.example/${this.sourcePath.replace(/^\//, '')}`);
+      console.log(`Host endpoint: http://${this.host}:${this.port}${this.sourcePath}`);
       console.log(`WebSocket endpoint: ws://${this.host}:${this.port}`);
     });
 
