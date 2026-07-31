@@ -3,7 +3,7 @@ const path = require('node:path');
 const { startGabberBridge } = require('./gabberBridge');
 const { loadCommands, randomNumber, getRandomGif } = require('./utils/botHelpers');
 
-const { token, twitchUsername, twitchOAuth, twitchChannel, allowedDiscordChannels } = require('./config.json');
+const { token, twitchUsername, twitchOAuth, twitchChannel, allowedDiscordChannels, gameNotificationChannelId, gameNotificationUser, gameNotificationGame } = require('./config.json');
 const vicMuse = require('./data/vicmuse.json');
 const vicRoll = require('./data/vicroll.json');
 const vicTalk1 = require('./data/victalk1.json');
@@ -15,6 +15,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.GuildPresences,
   ],
 });
 
@@ -33,6 +34,27 @@ startGabberBridge({
   twitchOAuth,
   channel: twitchChannel,
   allowedChannels: allowedDiscordChannels,
+});
+
+client.on('presenceUpdate', (oldPresence, newPresence) => {
+  if (!gameNotificationChannelId || !gameNotificationUser || !gameNotificationGame) return;
+
+  const member = newPresence?.member;
+  if (!member || member.user?.username !== gameNotificationUser) return;
+
+  const activities = newPresence?.activities || [];
+  const playingGame = activities.some((activity) => activity.type === 0 && activity.name?.toLowerCase() === gameNotificationGame.toLowerCase());
+  const wasPlaying = (oldPresence?.activities || []).some((activity) => activity.type === 0 && activity.name?.toLowerCase() === gameNotificationGame.toLowerCase());
+
+  if (playingGame && !wasPlaying) {
+    const channel = client.channels.cache.get(gameNotificationChannelId);
+    if (channel?.isTextBased?.()) channel.send("McGabber's is ready to take orders");
+  }
+
+  if (!playingGame && wasPlaying) {
+    const channel = client.channels.cache.get(gameNotificationChannelId);
+    if (channel?.isTextBased?.()) channel.send("McGabber's is closed");
+  }
 });
 
 client.on('messageCreate', (message) => {

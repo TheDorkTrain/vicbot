@@ -5,5 +5,8 @@
   "twitchUsername": "thedorktrain",
   "twitchOAuth": "oauth:",
   "twitchChannel": "#thedorktrain",
-  "allowedDiscordChannels": ["1532767072214454292"]
+  "allowedDiscordChannels": ["1532767072214454292"],
+  "gameNotificationChannelId": "1532767072214454292",
+  "gameNotificationUser": "gabber3579",
+  "gameNotificationGame": "Burgie's Cozy Kitchen"
 }
