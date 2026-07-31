@@ -23,13 +23,24 @@ class ChatProxy extends EventEmitter {
       }
 
       if (req.url === this.sourcePath || req.url === `${this.sourcePath}/`) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          ok: true,
-          source: `https://${this.provider}.example/${this.sourcePath.replace(/^\//, '')}`,
-          provider: this.provider,
-          message: 'fake livestream source endpoint',
-        }));
+        const source = `https://${this.provider}.example/${this.sourcePath.replace(/^\//, '')}`;
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${this.provider} Live</title>
+    <meta property="og:type" content="video.other" />
+    <meta property="og:title" content="Vicbot Discord Chat" />
+    <meta property="og:description" content="Proxy source for Discord chat" />
+    <meta property="og:url" content="${source}" />
+  </head>
+  <body>
+    <h1>Vicbot Discord Chat Source</h1>
+    <p>This page is served locally for source compatibility.</p>
+    <script>window.__vicbot_source__ = { provider: '${this.provider}', source: '${source}', chat: true };</script>
+  </body>
+</html>`);
         return;
       }
 
@@ -56,10 +67,7 @@ class ChatProxy extends EventEmitter {
     });
 
     this.httpServer.listen(this.port, this.host, () => {
-      console.log(`Chat proxy listening on http://${this.host}:${this.port}`);
-      console.log(`Provider-style source endpoint: https://${this.provider}.example/${this.sourcePath.replace(/^\//, '')}`);
-      console.log(`Host endpoint: http://${this.host}:${this.port}${this.sourcePath}`);
-      console.log(`WebSocket endpoint: ws://${this.host}:${this.port}`);
+    //   console.log(`Go live at: http://${this.host}:${this.port}/watch?v=discord`);
     });
 
     return this;
