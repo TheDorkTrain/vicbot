@@ -20,6 +20,11 @@ function startGabberBridge({ discordClient, twitchUsername, twitchOAuth, channel
     throw new Error('discordClient is required');
   }
 
+  if (!twitchUsername || !twitchOAuth || twitchOAuth === 'oauth:' || twitchOAuth.includes('your')) {
+    console.error('Twitch authentication is not configured. Set twitchUsername and twitchOAuth in config.json before starting the bridge.');
+    return { twitchClient: null, targetChannel: normalizeChannel(channel) };
+  }
+
   const targetChannel = normalizeChannel(channel);
   const twitchClient = new Client({
     options: { debug: false },
@@ -32,7 +37,8 @@ function startGabberBridge({ discordClient, twitchUsername, twitchOAuth, channel
   });
 
   twitchClient.connect().catch((error) => {
-    console.error('Failed to connect to Twitch chat:', error);
+    console.error('Failed to connect to Twitch chat. Check your Twitch username and OAuth token.');
+    console.error(error);
   });
 
   discordClient.on('messageCreate', (message) => {
