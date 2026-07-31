@@ -30,7 +30,7 @@ client.on(interactionEvent.name, (...args) => interactionEvent.execute(...args))
 
 startGabberBridge({ discordClient: client, token: null, port: 6667 });
 
-const chatProxy = new ChatProxy({ port: 3000, host: '127.0.0.1', sourcePath: '/watch?v=discord', provider: 'youtube' });
+const chatProxy = new ChatProxy({ port: 3000, host: '127.0.0.1', sourcePath: '/live/discord', provider: 'tiktok' });
 chatProxy.start();
 
 client.on('messageCreate', (message) => {
