@@ -1,10 +1,9 @@
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const path = require('node:path');
 const { startGabberBridge } = require('./gabberBridge');
-const { ChatProxy } = require('./proxyServer');
 const { loadCommands, randomNumber, getRandomGif } = require('./utils/botHelpers');
 
-const { token } = require('./config.json');
+const { token, twitchUsername, twitchOAuth, twitchChannel, allowedDiscordChannels } = require('./config.json');
 const vicMuse = require('./data/vicmuse.json');
 const vicRoll = require('./data/vicroll.json');
 const vicTalk1 = require('./data/victalk1.json');
@@ -28,21 +27,16 @@ const interactionEvent = require('./events/interactionCreate');
 client.on(readyEvent.name, (...args) => readyEvent.execute(...args));
 client.on(interactionEvent.name, (...args) => interactionEvent.execute(...args));
 
-startGabberBridge({ discordClient: client, token: null, port: 6667 });
-
-const chatProxy = new ChatProxy({ port: 3000, host: '127.0.0.1', sourcePath: '/live/discord', provider: 'tiktok' });
-chatProxy.start();
+startGabberBridge({
+  discordClient: client,
+  twitchUsername,
+  twitchOAuth,
+  channel: twitchChannel,
+  allowedChannels: allowedDiscordChannels,
+});
 
 client.on('messageCreate', (message) => {
   if (message.author.bot) return;
-
-  chatProxy.broadcast({
-    type: 'chat',
-    user: message.member?.displayName || message.author.displayName || message.author.username,
-    content: message.content,
-    channelId: message.channelId,
-    timestamp: new Date().toISOString(),
-  });
 
   const channel = client.channels.cache.get(message.channelId);
   if (!channel) return;

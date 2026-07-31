@@ -1,73 +1,54 @@
-const WebSocket = require('ws');
+const { Client } = require('tmi.js');
 
-function sanitizeNick(displayName) {
-  return String(displayName || 'bot')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '_')
-    .replace(/[^a-z0-9_-]/g, '')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '') || 'bot';
+function normalizeChannel(channel) {
+  const name = String(channel || '#thedorktrain').trim();
+  return name.startsWith('#') ? name : `#${name}`;
 }
 
-function formatIrcMessage({ username, displayName, content, userId = '0', roomId = '0' }) {
-  const nick = sanitizeNick(displayName || username || 'bot');
-  const displayNameValue = String(displayName || username || 'bot');
-  const id = `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
-  const tags = `@badge-info=;badges=;color=;display-name=${displayNameValue};emotes=;flags=;id=${id};mod=0;room-id=${roomId};subscriber=0;tmi-sent-ts=${Date.now()};turbo=0;user-id=${userId};user-type= `;
-
-  return `${tags}:${nick}!${nick}@${nick}.tmi.twitch.tv PRIVMSG #discord :${content}\r\n`;
+function formatTwitchChatMessage({ content, channel = '#thedorktrain' }) {
+  return `PRIVMSG ${normalizeChannel(channel)} :${content}`;
 }
 
-function startGabberBridge({ port = 6667, discordClient, token }) {
+function shouldForwardMessage(message, allowedChannels = []) {
+  if (!message || message.author?.bot) return false;
+  if (allowedChannels.length === 0) return true;
+  return allowedChannels.includes(message.channelId) || allowedChannels.includes(message.channel?.name);
+}
+
+function startGabberBridge({ discordClient, twitchUsername, twitchOAuth, channel = '#thedorktrain', allowedChannels = [] }) {
   if (!discordClient) {
     throw new Error('discordClient is required');
   }
 
-  const wss = new WebSocket.Server({ port });
-  const clients = new Set();
+  const targetChannel = normalizeChannel(channel);
+  const twitchClient = new Client({
+    options: { debug: false },
+    connection: { secure: true, reconnect: true },
+    identity: {
+      username: twitchUsername,
+      password: twitchOAuth,
+    },
+    channels: [targetChannel],
+  });
 
-  wss.on('connection', (ws) => {
-    clients.add(ws);
-
-    ws.on('message', (data) => {
-      const msg = data.toString();
-      if (msg.startsWith('NICK')) {
-        ws.send(':tmi.twitch.tv 001 bot :Welcome');
-        ws.send(':tmi.twitch.tv 376 bot :End of /MOTD');
-      }
-      if (msg.startsWith('JOIN')) {
-        ws.send(':bot!bot@bot.tmi.twitch.tv JOIN #channel');
-      }
-    });
-
-    ws.on('close', () => clients.delete(ws));
+  twitchClient.connect().catch((error) => {
+    console.error('Failed to connect to Twitch chat:', error);
   });
 
   discordClient.on('messageCreate', (message) => {
-    if (message.author.bot) return;
+    if (!shouldForwardMessage(message, allowedChannels)) return;
 
-    const ircMessage = formatIrcMessage({
-      username: message.author.username,
-      displayName: message.member?.displayName || message.author.displayName || message.author.username,
+    const payload = formatTwitchChatMessage({
       content: message.content,
-      userId: message.author.id,
-      roomId: message.channelId,
+      channel: targetChannel,
     });
 
-    clients.forEach((ws) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(ircMessage);
-      }
-    });
+    twitchClient.say(targetChannel, message.content);
+    console.log(`[twitch-bridge] ${payload}`);
   });
 
-  if (token) {
-    discordClient.login(token);
-  }
-
-  console.log(`Gabber bridge listening on ws://localhost:${port}`);
-  return { wss, clients };
+  console.log(`Twitch bridge ready for ${targetChannel}`);
+  return { twitchClient, targetChannel };
 }
 
-module.exports = { startGabberBridge, formatIrcMessage, sanitizeNick };
+module.exports = { startGabberBridge, formatTwitchChatMessage, normalizeChannel, shouldForwardMessage };
