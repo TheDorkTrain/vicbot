@@ -1,13 +1,30 @@
 const { Client, GatewayIntentBits, Collection } = require('discord.js');
 const path = require('node:path');
 const { startGabberBridge } = require('./gabberBridge');
+const { startTwitchLiveMonitor } = require('./twitchLiveMonitor');
+const { TIER_NAMES, createTierList } = require('./tierList');
+const { createTierResponse } = require('./tierResponse');
 const { loadCommands, randomNumber, getRandomGif } = require('./utils/botHelpers');
 
-const { token, twitchUsername, twitchOAuth, twitchChannel, allowedDiscordChannels, gameNotificationChannelId, gameNotificationUser, gameNotificationGame } = require('./config.json');
+const {
+  token,
+  twitchUsername,
+  twitchOAuth,
+  twitchChannel,
+  allowedDiscordChannels,
+  twitchClientId,
+  twitchClientSecret,
+  twitchLiveNotificationChannelId,
+  gameNotificationChannelId,
+  gameNotificationUser,
+  gameNotificationGame,
+} = require('./config.json');
 const vicMuse = require('./data/vicmuse.json');
 const vicRoll = require('./data/vicroll.json');
 const vicTalk1 = require('./data/victalk1.json');
 const vicTalk2 = require('./data/victalk2.json');
+const tierResponses = require('./data/vicTier.json');
+const tierList = createTierList();
 
 const client = new Client({
   intents: [
@@ -34,6 +51,15 @@ startGabberBridge({
   twitchOAuth,
   channel: twitchChannel,
   allowedChannels: allowedDiscordChannels,
+});
+
+client.once('ready', () => {
+  startTwitchLiveMonitor({
+    discordClient: client,
+    clientId: twitchClientId,
+    clientSecret: twitchClientSecret,
+    notificationChannelId: twitchLiveNotificationChannelId,
+  });
 });
 
 client.on('presenceUpdate', (oldPresence, newPresence) => {
@@ -63,6 +89,50 @@ client.on('messageCreate', (message) => {
   const channel = client.channels.cache.get(message.channelId);
   if (!channel) return;
 
+  const tierListCommand = message.content.trim().match(/^vic tier list$/i);
+  if (tierListCommand) {
+    const tiers = tierList.getTiers();
+    const lines = TIER_NAMES.flatMap((tier) => {
+      const items = tiers[tier];
+      const entries = items.length
+        ? items.map((item, index) => `${index + 1}. ${item.length > 300 ? `${item.slice(0, 297)}...` : item}`)
+        : ['(empty)'];
+      return [`**${tier}**`, ...entries];
+    });
+
+    let response = '';
+    for (const line of lines) {
+      if (response && response.length + line.length + 1 > 1900) {
+        channel.send({ content: response, allowedMentions: { parse: [] } });
+        response = '';
+      }
+      response = response ? `${response}\n${line}` : line;
+    }
+    if (response) channel.send({ content: response, allowedMentions: { parse: [] } });
+    return;
+  }
+
+  const tierPrompt = message.content.match(/^vic\s+what\s+do\s+you\s+think\s+about\s+([\s\S]*)$/i);
+  if (tierPrompt) {
+    const item = tierPrompt[1].trim().replace(/\s+/g, ' ');
+    if (!item) {
+      message.reply({ content: 'errr What do I think about what', allowedMentions: { parse: [] } });
+      return;
+    }
+
+    const response = createTierResponse({
+      item,
+      tierList,
+      responses: tierResponses,
+      random: Math.random,
+    });
+    message.reply({
+      content: response.content,
+      allowedMentions: { parse: [] },
+    });
+    return;
+  }
+
   const chance = randomNumber(1, 8);
   const emojiChance = randomNumber(1, 8);
   const words = message.content.split(/\s+/).filter(Boolean);
@@ -84,7 +154,7 @@ client.on('messageCreate', (message) => {
 
   if (!message.author.bot && emojiChance >= 4) {
     // const emojis = ['💙','🌊', '🔵'];
-    const emojis = ['🫀', '🔥','💙', '🤖', '🦑', '💩', '🍆', '😎', '🤎', '1212817898469466142', '988172041943392256', '984203212104028201', '984201425095630899', '984201497485135913', '984203787214401626', '1212815778592596058'];
+    const emojis = ['🫀', '🔥','💙', '🤡', '🙀', '🤮', '🤖','🏳️‍🌈','🏳️‍⚧️', '🧐', '😽', '🦑', '💩', '🍆', '😎', '🤎', '1212817898469466142', '988172041943392256', '984203212104028201', '984201425095630899', '984201497485135913', '984203787214401626', '1212815778592596058'];
     message.react(emojis[randomNumber(0, emojis.length - 1)]);
   }
 
