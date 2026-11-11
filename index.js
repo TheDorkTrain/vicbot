@@ -83,7 +83,8 @@ client.on('messageCreate', (message) => {
   }
 
   if (!message.author.bot && emojiChance >= 4) {
-    const emojis = ['🫀', '🔥', '🤖', '🦑', '💩', '🍆', '😎', '🤎', '1212817898469466142', '988172041943392256', '984203212104028201', '984201425095630899', '984201497485135913', '984203787214401626', '1212815778592596058'];
+    // const emojis = ['💙','🌊', '🔵'];
+    const emojis = ['🫀', '🔥','💙', '🤖', '🦑', '💩', '🍆', '😎', '🤎', '1212817898469466142', '988172041943392256', '984203212104028201', '984201425095630899', '984201497485135913', '984203787214401626', '1212815778592596058'];
     message.react(emojis[randomNumber(0, emojis.length - 1)]);
   }
 
@@ -102,7 +103,7 @@ client.on('messageCreate', (message) => {
     const part1Random = randomNumber(0, vicTalk1.part1.length - 1);
     const part2Random = randomNumber(0, vicTalk2.part2.length - 1);
 
-    if (sort >= 4) {
+    if (sort <= 4) {
       channel.send(vicMuse.muse[museRandom]);
     } else if (sort <= 7 && sort >= 5) {
       channel.send(`${vicTalk1.part1[part1Random]} ${vicTalk2.part2[part2Random]}`);
