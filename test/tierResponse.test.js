@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createTierResponse, getForcedTier, TIER_GROUPS } = require('../tierResponse');
+const { createTierResponse, extractTierItem, getForcedTier, TIER_GROUPS } = require('../tierResponse');
 
 const responses = {
   reject: ['nope'],
@@ -23,6 +23,38 @@ test('rejects about one in twenty requests without adding an item', () => {
 
   assert.deepEqual(result, { rejected: true, content: 'nope' });
   assert.equal(additions, 0);
+});
+
+test('extracts tier items from the supported question and rank phrasings', () => {
+  const examples = [
+    ['Vic what do you think about peanut butter?', 'peanut butter?'],
+    ['Vic, what do you think of pizza', 'pizza'],
+    ['Vic what is your opinion on this movie', 'this movie'],
+    ["Vic, what's your opinion about this movie?", 'this movie?'],
+    ['Vic rank: these tacos', 'these tacos'],
+    ['Vic rank chocolate', 'chocolate'],
+  ];
+
+  for (const [prompt, expectedItem] of examples) {
+    assert.equal(extractTierItem(prompt), expectedItem);
+  }
+  assert.equal(extractTierItem('Vic, what do you think?'), null);
+});
+
+test('extracts items from the seven additional opinion phrasings with or without a comma', () => {
+  const examples = [
+    ['Vic how do you feel about pineapple pizza?', 'pineapple pizza?'],
+    ['Vic, what are your thoughts on this movie?', 'this movie?'],
+    ['Vic give me your take on these tacos', 'these tacos'],
+    ['Vic, do you like jazz?', 'jazz?'],
+    ['Vic how would you rate this game', 'this game'],
+    ['Vic, where would you rank this book?', 'this book?'],
+    ['Vic is this sandwich any good?', 'this sandwich'],
+  ];
+
+  for (const [prompt, expectedItem] of examples) {
+    assert.equal(extractTierItem(prompt), expectedItem);
+  }
 });
 
 test('uses the lead-in category to select an allowed tier and starts with an intro', () => {

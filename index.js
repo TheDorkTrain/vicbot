@@ -3,7 +3,7 @@ const path = require('node:path');
 const { startGabberBridge } = require('./gabberBridge');
 const { startTwitchLiveMonitor } = require('./twitchLiveMonitor');
 const { TIER_NAMES, createTierList } = require('./tierList');
-const { createTierResponse } = require('./tierResponse');
+const { createTierResponse, extractTierItem } = require('./tierResponse');
 const { loadCommands, randomNumber, getRandomGif } = require('./utils/botHelpers');
 
 const {
@@ -112,11 +112,10 @@ client.on('messageCreate', (message) => {
     return;
   }
 
-  const tierPrompt = message.content.match(/^vic\s+what\s+do\s+you\s+think\s+about\s+([\s\S]*)$/i);
-  if (tierPrompt) {
-    const item = tierPrompt[1].trim().replace(/\s+/g, ' ');
+  const item = extractTierItem(message.content);
+  if (item !== null) {
     if (!item) {
-      message.reply({ content: 'errr What do I think about what', allowedMentions: { parse: [] } });
+      message.reply({ content: 'What do you want me to rank?', allowedMentions: { parse: [] } });
       return;
     }
 

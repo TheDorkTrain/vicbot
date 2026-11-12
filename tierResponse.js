@@ -8,6 +8,17 @@ const TIER_GROUPS = {
 const S_TIER_PREFIXES = ['gabby', 'gabs', 'gabber', 'artemis', 'penny', 'tinkaton', 'vic', 'very important people'];
 const TRASH_TIER_PREFIXES = ['sam reich', 'gamechanger', 'trump', 'donald trump', 'republicans', 'jd vance', 'nazis', 'hitler', 'racism', 'transphobia', 'sexism', 'ableism', 'misogyny', 'bigotry', 'racist', "racists", 'nazi', 'fascist', 'white supremacist'];
 
+function extractTierItem(content) {
+  const text = String(content).trim();
+  const anyGoodPrompt = text.match(/^vic\b\s*,?\s*is\s+([\s\S]+?)\s+any\s+good[?!.,]*$/i);
+  if (anyGoodPrompt) return anyGoodPrompt[1].trim().replace(/\s+/g, ' ');
+
+  const prompt = text.match(
+    /^vic\b\s*,?\s*(?:(?:what\s+do\s+you\s+think\s+(?:about|of))|(?:what(?:\s+is|'s)\s+your\s+opinion\s+(?:on|about|of))|(?:how\s+do\s+you\s+feel\s+(?:about|of))|(?:what\s+are\s+your\s+thoughts\s+(?:on|about|of))|(?:give\s+me\s+your\s+take\s+(?:on|about|of))|(?:do\s+you\s+like)|(?:how\s+would\s+you\s+rate)|(?:where\s+would\s+you\s+rank)|rank)(?:\s+|[:,—-]\s*)?([\s\S]*)$/i,
+  );
+  return prompt ? prompt[1].trim().replace(/\s+/g, ' ') : null;
+}
+
 function startsWithAnyPrefix(item, prefixes) {
   const normalizedItem = item.trim().toLowerCase().replace(/[’‘]/g, "'");
   return prefixes.some((prefix) => {
@@ -66,4 +77,4 @@ function createTierResponse({ item, tierList, responses, random = Math.random, i
   };
 }
 
-module.exports = { createTierResponse, getForcedTier, TIER_GROUPS };
+module.exports = { createTierResponse, extractTierItem, getForcedTier, TIER_GROUPS };
