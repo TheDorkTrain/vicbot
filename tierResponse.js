@@ -6,7 +6,7 @@ const TIER_GROUPS = {
 };
 
 const S_TIER_PREFIXES = ['gabby', 'gabs', 'gabber', 'artemis', 'penny', 'tinkaton', 'vic', 'very important people'];
-const TRASH_TIER_PREFIXES = ['sam reich', 'gamechanger', 'trump', 'republicans', 'jd vance', 'nazis', 'hitler', 'racism', 'transphobia', 'sexism', 'ableism', 'misogyny', 'bigotry', 'racist', "racists", 'nazi', 'fascist', 'white supremacist'];
+const TRASH_TIER_PREFIXES = ['sam reich', 'gamechanger', 'trump', 'donald trump', 'republicans', 'jd vance', 'nazis', 'hitler', 'racism', 'transphobia', 'sexism', 'ableism', 'misogyny', 'bigotry', 'racist', "racists", 'nazi', 'fascist', 'white supremacist'];
 
 function startsWithAnyPrefix(item, prefixes) {
   const normalizedItem = item.trim().toLowerCase().replace(/[’‘]/g, "'");
