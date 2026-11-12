@@ -1,6 +1,22 @@
 const TWITCH_API_BASE = 'https://api.twitch.tv/helix';
 const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 
+async function readTwitchResponse(response, operation) {
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(`${operation} returned an invalid response (HTTP ${response.status}).`);
+  }
+
+  if (!response.ok) {
+    const detail = typeof data.message === 'string' ? `: ${data.message}` : '';
+    throw new Error(`${operation} failed with HTTP ${response.status}${detail}`);
+  }
+
+  return data;
+}
+
 function startTwitchLiveMonitor({
   discordClient,
   clientId,
@@ -29,17 +45,17 @@ function startTwitchLiveMonitor({
   async function getAccessToken() {
     if (accessToken && Date.now() < tokenExpiresAt) return accessToken;
 
-    const url = new URL(TWITCH_TOKEN_URL);
-    url.searchParams.set('client_id', clientId);
-    url.searchParams.set('client_secret', clientSecret);
-    url.searchParams.set('grant_type', 'client_credentials');
-
-    const response = await fetchImpl(url, { method: 'POST' });
-    if (!response.ok) {
-      throw new Error(`Twitch app-token request failed with HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
+    const body = new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: 'client_credentials',
+    });
+    const response = await fetchImpl(TWITCH_TOKEN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    const data = await readTwitchResponse(response, 'Twitch app-token request');
     if (!data.access_token || !data.expires_in) {
       throw new Error('Twitch app-token response did not include a token and expiration.');
     }
@@ -63,10 +79,7 @@ function startTwitchLiveMonitor({
       tokenExpiresAt = 0;
       return fetchTwitchApi(url, false);
     }
-    if (!response.ok) {
-      throw new Error(`Twitch API request failed with HTTP ${response.status}`);
-    }
-    return response.json();
+    return readTwitchResponse(response, 'Twitch API request');
   }
 
   async function getChannelUserId() {

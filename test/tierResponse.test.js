@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createTierResponse, TIER_GROUPS } = require('../tierResponse');
+const { createTierResponse, getForcedTier, TIER_GROUPS } = require('../tierResponse');
 
 const responses = {
   reject: ['nope'],
@@ -48,4 +48,65 @@ test('uses the lead-in category to select an allowed tier and starts with an int
   assert.match(result.content, /^intro good lead!/);
   assert.match(result.content, /lands in [AB] Tier\./);
   assert.match(result.content, /above cereal and below toast\./);
+});
+
+test('automatically assigns configured prefix matches to their forced tiers', () => {
+  for (const item of ["Gabby's cooking", 'Gabs are great', 'Gabber stream']) {
+    assert.equal(getForcedTier(item), 'S Tier');
+  }
+  for (const item of ['Trump again', 'Republicans today', 'JD Vance said', 'Nazis', 'Hitler', 'Racism in games']) {
+    assert.equal(getForcedTier(item), 'Trash Tier');
+  }
+
+  assert.equal(getForcedTier('the Gabber show'), null);
+  assert.equal(getForcedTier('Trumpet music'), null);
+});
+
+test('places Gabber-authored Me and My phrases in S Tier without rejecting them', () => {
+  const assignedTiers = [];
+  const values = [0.999, 0, 0, 0];
+  const tierList = {
+    add(item, tier) {
+      assignedTiers.push(tier);
+      return { higher: null, lower: null };
+    },
+  };
+
+  const meResult = createTierResponse({
+    item: 'Me',
+    tierList,
+    responses,
+    isGabber: true,
+    random: () => values.shift(),
+  });
+  const myResult = createTierResponse({
+    item: 'My favorite thing',
+    tierList,
+    responses,
+    isGabber: true,
+    random: () => values.shift(),
+  });
+
+  assert.deepEqual(assignedTiers, ['S Tier', 'S Tier']);
+  assert.equal(meResult.rejected, false);
+  assert.equal(myResult.rejected, false);
+  assert.equal(getForcedTier('Me', { isGabber: false }), null);
+});
+
+test('forced tier phrases bypass rejection and trash keywords take priority', () => {
+  const assignedTiers = [];
+  const result = createTierResponse({
+    item: 'Trump is an automatic trash-tier entry',
+    tierList: {
+      add(item, tier) {
+        assignedTiers.push(tier);
+        return { higher: null, lower: null };
+      },
+    },
+    responses,
+    random: () => 0,
+  });
+
+  assert.deepEqual(assignedTiers, ['Trash Tier']);
+  assert.equal(result.rejected, false);
 });

@@ -125,6 +125,8 @@ client.on('messageCreate', (message) => {
       tierList,
       responses: tierResponses,
       random: Math.random,
+      isGabber: message.author.username.toLowerCase() === 'gabber'
+        || message.member?.displayName?.toLowerCase() === 'gabber',
     });
     message.reply({
       content: response.content,
